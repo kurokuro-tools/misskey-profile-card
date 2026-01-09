@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <title>Misskey プロフィールカード作成ツール</title>
+    <meta name="description" content="Misskey（ミスキー）用の自己紹介カード・プロフィール画像をブラウザ上で簡単に作成できるツールです。画像はサーバーに送信されず、安全に利用できます。">
+    
+    <meta property="og:title" content="Misskey プロフィールカードジェネレーター">
+    <meta property="og:description" content="Misskey用の自己紹介カードを簡単作成！画像はブラウザ内で処理されるため安心です。">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://example.com/">
+    <meta property="og:image" content="https://example.com/ogp.png">
+    
+    <meta name="twitter:card" content="summary_large_image">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+
+    <style>
+        /* --- ダークモード固定の色設定 --- */
+        :root {
+            --primary-color: #CBFF1C; /* ライムグリーン (アクセント) */
+            --bg-color: #0A0A0A;      /* ページ背景：黒 */
+            --text-color: #F0F0F0;    /* ページ文字：白に近いグレー */
+            --card-bg: #1A1A1A;       /* 操作パネル背景 */
+            --border-color: #333333;  /* 枠線 */
+            --input-bg: #222222;      /* 入力欄背景 */
+            --main-font: 'M PLUS Rounded 1c', sans-serif;
+        }
+
+        /* --- 全体のスタイル --- */
+        body {
+            font-family: var(--main-font);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 40px 20px;
+            box-sizing: border-box;
+            letter-spacing: 0.05em;
+        }
+
+        /* ヘッダーエリア */
+        .header-row {
+            display: flex;
+            align-items: baseline;
+            justify-content: center;
+            gap: 16px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+
+        h1 { 
+            margin: 0; 
+            font-size: 1.2rem; 
+            text-align: center; 
+            color: var(--text-color); 
+            opacity: 0.7; 
+            font-weight: 700; 
+        }
+
+        .bug-report {
+            font-size: 0.85rem;
+            color: var(--primary-color);
+            text-decoration: none;
+            border-bottom: 1px dotted var(--primary-color);
+            transition: opacity 0.2s;
+            opacity: 0.8;
+        }
+        .bug-report:hover { opacity: 1.0; }
+
+        .main-wrapper {
+            display: flex;
+            gap: 32px;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        /* キャンバスエリア */
+        .preview-area {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        canvas {
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+            background-color: #000;
+            max-width: 100%;
+            height: auto;
+        }
+
+        /* 入力フォームエリア */
+        .controls {
+            background: var(--card-bg);
+            padding: 24px;
+            border-radius: 20px;
+            border: 1px solid var(--border-color);
+            width: 320px;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        label {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            opacity: 0.9;
+        }
+
+        input[type="text"], textarea, select {
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            font-size: 1rem;
+            background: var(--input-bg);
+            color: #fff;
+            width: 100%;
+            box-sizing: border-box;
+            font-family: var(--main-font);
+        }
+
+        input[type="text"]:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(203, 255, 28, 0.2);
+        }
+        
+        textarea { resize: vertical; min-height: 80px; }
+
+        input[type="file"] {
+            font-size: 0.9rem;
+            color: #ccc;
+            font-family: var(--main-font);
+        }
+
+        /* ボタン */
+        .btn-download {
+            margin-top: 12px;
+            padding: 16px;
+            background-color: var(--primary-color);
+            color: #000;
+            border: none;
+            border-radius: 12px;
+            font-weight: 800;
+            font-size: 1.1rem;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.2s;
+            font-family: var(--main-font);
+            box-shadow: 0 4px 0 rgba(0,0,0,0.2);
+        }
+        .btn-download:hover { transform: translateY(-2px); box-shadow: 0 6px 0 rgba(0,0,0,0.2); }
+        .btn-download:active { transform: translateY(2px); box-shadow: 0 0 0 rgba(0,0,0,0.2); }
+
+    </style>
+</head>
+<body>
+
+    <div class="header-row">
+        <h1>Misskey プロフィールカード作成ツール</h1>
+        <a href="https://misskey.io/@kuro_kuro_kuroi" target="_blank" class="bug-report">不具合報告はこちら</a>
+    </div>
+
+    <div class="main-wrapper">
+        <div class="preview-area">
+            <canvas id="cardCanvas" width="800" height="600"></canvas>
+            <p style="font-size:0.85rem; opacity:0.6; text-align:center;">
+                ※画像・URLはサーバーには送信されません
+            </p>
+        </div>
+
+        <div class="controls">
+            
+            <div class="form-group">
+                <label>アイコン画像</label>
+                <input type="file" id="imageInput" accept="image/*">
+            </div>
+
+            <div class="form-group">
+                <label>名前</label>
+                <input type="text" id="nameInput" value="名無しさん">
+            </div>
+
+            <div class="form-group">
+                <label>Misskey ID</label>
+                <input type="text" id="idInput" value="@nanashi">
+            </div>
+
+            <div class="form-group">
+                <label>サーバー名</label>
+                <input type="text" id="serverInput" value="misskey.io">
+            </div>
+
+            <div class="form-group">
+                <label>性別</label>
+                <select id="genderInput">
+                    <option value="男">男</option>
+                    <option value="女">女</option>
+                    <option value="ナイショ">ナイショ</option>
+                    <option value="その他">その他</option>
+                    <option value="ご想像にお任せ" selected>ご想像にお任せ</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>プロフィールURL (QRコード生成)</label>
+                <input type="text" id="urlInput" placeholder="https://misskey.io/@...">
+            </div>
+
+            <div class="form-group">
+                <label>よくノートすること</label>
+                <textarea id="noteInput">技術、デザイン、日常のつぶやき。美味しいご飯の話も多いです。</textarea>
+            </div>
+
+            <div class="form-group">
+                <label>こういう人と仲良くなりたい</label>
+                <textarea id="friendInput">クリエイターの方、猫好きな方、くだらない話で盛り上がれる方！</textarea>
+            </div>
+
+            <div class="form-group">
+                <label>Misskeyに来た理由</label>
+                <textarea id="reasonInput">Twitterが騒がしくなってきたので、居心地の良い場所を探して辿り着きました。</textarea>
+            </div>
+
+            <button class="btn-download" id="downloadBtn">画像をダウンロード</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('cardCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const imageInput = document.getElementById('imageInput');
+        const nameInput = document.getElementById('nameInput');
+        const idInput = document.getElementById('idInput');
+        const serverInput = document.getElementById('serverInput');
+        const genderInput = document.getElementById('genderInput');
+        const urlInput = document.getElementById('urlInput'); 
+        const noteInput = document.getElementById('noteInput');
+        const friendInput = document.getElementById('friendInput');
+        const reasonInput = document.getElementById('reasonInput');
+        const downloadBtn = document.getElementById('downloadBtn');
+
+        let uploadedImage = null;
+        let qrImage = null; 
+        const fontName = '"M PLUS Rounded 1c", sans-serif';
+
+        function draw() {
+            // 背景
+            ctx.fillStyle = '#0A0A0A';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const textColor = '#FFFFFF';
+            const accentColor = '#CBFF1C';
+
+            // レイアウト定数
+            const cardPaddingY = 40;
+            const contentStartY = cardPaddingY + 50;
+            const leftCenterX = 200; 
+            const rightStartX = 420;
+            const rightContentWidth = 340;
+            const dividerX = 370;
+
+            // タイトル
+            ctx.fillStyle = accentColor;
+            ctx.font = `800 24px ${fontName}`;
+            ctx.textAlign = 'left'; 
+            ctx.textBaseline = 'middle';
+            ctx.fillText('Misskey プロフィールカード', rightStartX - 20, cardPaddingY + 10);
+
+
+            // --- 左カラムレイアウト計算 ---
+            const iconCY = contentStartY + 45; 
+            const iconRadiusOuter = 84; 
+            const iconBottomY = iconCY + iconRadiusOuter;
+
+            const nameMarginTop = 50; 
+            const nameY = iconBottomY + nameMarginTop;
+
+            const genderLabelMarginTop = 32; 
+            const genderLabelY = nameY + genderLabelMarginTop;
+            const genderValueMarginTop = 26; 
+            const genderY = genderLabelY + genderValueMarginTop;
+
+            const idBtnMarginTop = 48; 
+            const idButtonCY = genderY + idBtnMarginTop;
+            const idHeight = 34;
+
+            // サーバー名の位置 (IDの下)
+            const serverMarginTop = 32;
+            const serverY = idButtonCY + (idHeight/2) + serverMarginTop;
+
+            // QRコードの位置 (サーバー名の下)
+            const qrMarginTop = 32; 
+            const qrY = serverY + qrMarginTop; 
+            const qrSize = 80; 
+
+
+            // --- 描画実行 ---
+
+            // アイコン
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(leftCenterX, iconCY, 80, 0, Math.PI * 2, true);
+            ctx.closePath();
+            ctx.clip(); 
+            if (uploadedImage) {
+                const size = 160; 
+                const scale = Math.max(size / uploadedImage.width, size / uploadedImage.height);
+                const w = uploadedImage.width * scale;
+                const h = uploadedImage.height * scale;
+                const x = leftCenterX - w / 2;
+                const y = iconCY - h / 2;
+                ctx.drawImage(uploadedImage, x, y, w, h);
+            } else {
+                ctx.fillStyle = '#222';
+                ctx.fillRect(leftCenterX - 80, iconCY - 80, 160, 160);
+                ctx.fillStyle = accentColor;
+                ctx.font = `bold 40px ${fontName}`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('NO IMG', leftCenterX, iconCY);
+            }
+            ctx.restore(); 
+
+            // アイコン枠
+            ctx.beginPath();
+            ctx.arc(leftCenterX, iconCY, iconRadiusOuter, 0, Math.PI * 2);
+            ctx.strokeStyle = accentColor;
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            // 名前
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'alphabetic';
+            ctx.fillStyle = textColor;
+            ctx.font = `800 36px ${fontName}`;
+            ctx.fillText(nameInput.value, leftCenterX, nameY);
+
+            // 性別
+            ctx.fillStyle = '#AAAAAA';
+            ctx.font = `bold 12px ${fontName}`;
+            ctx.fillText('性別', leftCenterX, genderLabelY);
+
+            ctx.fillStyle = accentColor; 
+            ctx.font = `700 20px ${fontName}`;
+            ctx.fillText(genderInput.value, leftCenterX, genderY);
+
+            // ID
+            let idText = idInput.value.trim();
+            if (idText && !idText.startsWith('@')) idText = '@' + idText;
+
+            ctx.font = `700 16px ${fontName}`;
+            const idWidth = ctx.measureText(idText).width + 40; 
+            const idX = leftCenterX - idWidth / 2;
+            const idYpos = idButtonCY - idHeight / 2;
+
+            ctx.fillStyle = accentColor; 
+            ctx.beginPath();
+            if (ctx.roundRect) {
+                 ctx.roundRect(idX, idYpos, idWidth, idHeight, idHeight/2);
+            } else {
+                ctx.rect(idX, idYpos, idWidth, idHeight);
+            }
+            ctx.fill();
+            
+            ctx.fillStyle = '#000000'; 
+            ctx.textBaseline = 'middle';
+            ctx.fillText(idText, leftCenterX, idButtonCY);
+
+            // --- サーバー名描画 ---
+            ctx.fillStyle = accentColor;
+            ctx.font = `700 16px ${fontName}`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle'; 
+            ctx.fillText(serverInput.value, leftCenterX, serverY);
+
+
+            // QRコード
+            if (qrImage) {
+                const qrX = leftCenterX - qrSize / 2;
+                
+                ctx.beginPath(); 
+                ctx.fillStyle = '#FFFFFF';
+                const border = 4;
+                if (ctx.roundRect) {
+                    ctx.roundRect(qrX - border, qrY - border, qrSize + border*2, qrSize + border*2, 8);
+                } else {
+                    ctx.fillRect(qrX - border, qrY - border, qrSize + border*2, qrSize + border*2);
+                }
+                ctx.fill();
+                
+                ctx.drawImage(qrImage, qrX, qrY, qrSize, qrSize);
+            }
+
+
+            // --- 右カラム ---
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'alphabetic';
+            let currentY = contentStartY + 30;
+
+            function drawSection(title, text) {
+                ctx.font = `800 20px ${fontName}`;
+                ctx.fillStyle = accentColor;
+                
+                const markX = rightStartX - 20;
+                const markY = currentY - 7;
+                ctx.beginPath();
+                ctx.arc(markX, markY, 8, 0, Math.PI * 2);
+                ctx.fillStyle = accentColor;
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(markX, markY, 4, 0, Math.PI * 2);
+                ctx.fillStyle = '#0A0A0A';
+                ctx.fill();
+
+                ctx.fillStyle = accentColor;
+                ctx.fillText(title, rightStartX, currentY);
+                
+                currentY += 40;
+
+                ctx.fillStyle = textColor;
+                ctx.font = `500 17px ${fontName}`;
+                const lineHeight = 28;
+                const words = text.split('');
+                let line = '';
+
+                for(let i = 0; i < words.length; i++) {
+                    const testLine = line + words[i];
+                    const metrics = ctx.measureText(testLine);
+                    if (metrics.width > rightContentWidth && i > 0) {
+                        ctx.fillText(line, rightStartX, currentY);
+                        line = words[i];
+                        currentY += lineHeight;
+                    } else {
+                        line = testLine;
+                    }
+                }
+                ctx.fillText(line, rightStartX, currentY);
+                
+                currentY += 50; 
+            }
+
+            drawSection('よくノートすること', noteInput.value);
+            drawSection('こういう人と仲良くなりたい', friendInput.value);
+            drawSection('Misskeyに来た理由', reasonInput.value);
+
+            // 仕切り線
+            ctx.beginPath();
+            ctx.strokeStyle = '#444'; 
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 10]);
+            ctx.moveTo(dividerX, contentStartY);
+            ctx.lineTo(dividerX, canvas.height - cardPaddingY);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+
+        // イベント処理
+        imageInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => { uploadedImage = img; draw(); };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        urlInput.addEventListener('input', () => {
+            const url = urlInput.value.trim();
+            if (url) {
+                try {
+                    const typeNumber = 0; 
+                    const errorCorrectionLevel = 'L';
+                    const qr = qrcode(typeNumber, errorCorrectionLevel);
+                    qr.addData(url);
+                    qr.make();
+                    const dataURL = qr.createDataURL(4, 0); 
+
+                    const img = new Image();
+                    img.onload = () => { qrImage = img; draw(); };
+                    img.src = dataURL;
+                } catch (e) {
+                    console.error("QR Error", e);
+                    qrImage = null; draw();
+                }
+            } else {
+                qrImage = null; draw();
+            }
+        });
+
+        [nameInput, idInput, serverInput, genderInput, noteInput, friendInput, reasonInput].forEach(input => {
+            input.addEventListener('input', draw);
+        });
+
+        downloadBtn.addEventListener('click', () => {
+            const link = document.createElement('a');
+            link.download = 'misskey-profile.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        });
+
+        document.fonts.ready.then(() => {
+            draw();
+        });
+    </script>
+</body>
+</html>
