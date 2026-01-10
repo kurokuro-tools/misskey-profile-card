@@ -145,6 +145,25 @@
             opacity: 0.9;
         }
 
+        /* 性別エリアのヘッダー用 */
+        .gender-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .gender-toggle {
+            font-size: 0.85rem;
+            font-weight: normal;
+            cursor: pointer;
+            color: #ccc;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .gender-toggle input {
+            cursor: pointer;
+        }
+
         input[type="text"], textarea, select {
             padding: 12px;
             border: 1px solid var(--border-color);
@@ -202,9 +221,14 @@
     <div class="main-wrapper">
         <div class="preview-area">
             <canvas id="cardCanvas" width="800" height="600"></canvas>
-            <p style="font-size:0.85rem; opacity:0.6; text-align:center;">
-                ※画像・URLはサーバーには送信されません
-            </p>
+            <div style="text-align:center;">
+                <p style="font-size:0.85rem; opacity:0.6; margin-bottom: 4px;">
+                    ※画像・URLはサーバーには送信されません
+                </p>
+                <p style="font-size:0.85rem; opacity:0.9; color: var(--primary-color); margin-top: 0;">
+                    #Misskeyプロフィカードメーカー　をつけて投稿してくれると助かる祭り
+                </p>
+            </div>
         </div>
 
         <div class="controls">
@@ -230,7 +254,12 @@
             </div>
 
             <div class="form-group">
-                <label>性別</label>
+                <div class="gender-header">
+                    <label>性別</label>
+                    <label class="gender-toggle">
+                        <input type="checkbox" id="hideGenderInput"> 隠す
+                    </label>
+                </div>
                 <select id="genderInput">
                     <option value="男">男</option>
                     <option value="女">女</option>
@@ -273,6 +302,7 @@
         const idInput = document.getElementById('idInput');
         const serverInput = document.getElementById('serverInput');
         const genderInput = document.getElementById('genderInput');
+        const hideGenderInput = document.getElementById('hideGenderInput'); // 追加
         const urlInput = document.getElementById('urlInput'); 
         const noteInput = document.getElementById('noteInput');
         const friendInput = document.getElementById('friendInput');
@@ -306,6 +336,10 @@
             ctx.textBaseline = 'middle';
             ctx.fillText('Misskey プロフィールカード', rightStartX - 20, cardPaddingY + 10);
 
+            // --- 性別表示フラグと位置ズレの計算 ---
+            const showGender = !hideGenderInput.checked;
+            // 性別を隠す場合、下にある要素を上にずらす量 (px)
+            const yOffset = showGender ? 0 : -60; 
 
             // --- 左カラムレイアウト計算 ---
             const iconCY = contentStartY + 45; 
@@ -320,16 +354,17 @@
             const genderValueMarginTop = 26; 
             const genderY = genderLabelY + genderValueMarginTop;
 
-            const idBtnMarginTop = 48; 
-            const idButtonCY = genderY + idBtnMarginTop;
+            // 調整: 全体的に少しずつ詰めて上に上げる
+            const idBtnMarginTop = 42; 
+            // 性別がある場合は genderY 基準、無い場合は nameY 基準で計算してずらすイメージ
+            // ここではシンプルに「性別がある場合の基準位置」+ yOffset で計算
+            const idButtonCY = genderY + idBtnMarginTop + yOffset;
             const idHeight = 34;
 
-            // サーバー名の位置 (IDの下)
-            const serverMarginTop = 32;
+            const serverMarginTop = 24; 
             const serverY = idButtonCY + (idHeight/2) + serverMarginTop;
 
-            // QRコードの位置 (サーバー名の下)
-            const qrMarginTop = 32; 
+            const qrMarginTop = 24; 
             const qrY = serverY + qrMarginTop; 
             const qrSize = 80; 
 
@@ -368,12 +403,10 @@
             ctx.lineWidth = 3;
             ctx.stroke();
 
-            // 名前
+            // 名前 (文字数によるフォントサイズ調整)
             ctx.textAlign = 'center';
             ctx.textBaseline = 'alphabetic';
             ctx.fillStyle = textColor;
-            
-            // --- 文字数によるフォントサイズ調整 ---
             let nameSize = 36;
             const nameLen = nameInput.value.length;
             if (nameLen > 6) {
@@ -382,14 +415,16 @@
             ctx.font = `800 ${nameSize}px ${fontName}`;
             ctx.fillText(nameInput.value, leftCenterX, nameY);
 
-            // 性別
-            ctx.fillStyle = '#AAAAAA';
-            ctx.font = `bold 12px ${fontName}`;
-            ctx.fillText('性別', leftCenterX, genderLabelY);
+            // 性別 (表示フラグがONのときのみ描画)
+            if (showGender) {
+                ctx.fillStyle = '#AAAAAA';
+                ctx.font = `bold 12px ${fontName}`;
+                ctx.fillText('性別', leftCenterX, genderLabelY);
 
-            ctx.fillStyle = accentColor; 
-            ctx.font = `700 20px ${fontName}`;
-            ctx.fillText(genderInput.value, leftCenterX, genderY);
+                ctx.fillStyle = accentColor; 
+                ctx.font = `700 20px ${fontName}`;
+                ctx.fillText(genderInput.value, leftCenterX, genderY);
+            }
 
             // ID
             let idText = idInput.value.trim();
@@ -427,7 +462,6 @@
                 
                 ctx.beginPath(); 
                 ctx.fillStyle = '#FFFFFF';
-                // ★余白(クワイエットゾーン)を広めに確保
                 const border = 10; 
                 if (ctx.roundRect) {
                     ctx.roundRect(qrX - border, qrY - border, qrSize + border*2, qrSize + border*2, 8);
@@ -438,6 +472,13 @@
                 
                 ctx.drawImage(qrImage, qrX, qrY, qrSize, qrSize);
             }
+
+            // ハッシュタグ
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = `bold 14px ${fontName}`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+            ctx.fillText('#Misskeyプロフィカードメーカー', leftCenterX, qrY + qrSize + 25);
 
 
             // --- 右カラム ---
@@ -541,6 +582,9 @@
         [nameInput, idInput, serverInput, genderInput, noteInput, friendInput, reasonInput].forEach(input => {
             input.addEventListener('input', draw);
         });
+        
+        // 性別隠すチェックボックスのイベント追加
+        hideGenderInput.addEventListener('change', draw);
 
         downloadBtn.addEventListener('click', () => {
             const link = document.createElement('a');
