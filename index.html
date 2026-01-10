@@ -79,7 +79,6 @@
             font-weight: 700; 
         }
 
-        /* 非公式バッジのスタイルを追加 */
         .unofficial-badge {
             font-size: 0.8rem;
             opacity: 0.7;
@@ -374,17 +373,13 @@
             ctx.textBaseline = 'alphabetic';
             ctx.fillStyle = textColor;
             
-            // --- 文字数によるフォントサイズ調整ロジック ---
+            // --- 文字数によるフォントサイズ調整 ---
             let nameSize = 36;
             const nameLen = nameInput.value.length;
             if (nameLen > 6) {
-                // 6文字を超えた場合、文字数に応じてサイズを小さくする
-                // 例: 1文字ごとに3px小さくする（最小18pxまで）
                 nameSize = Math.max(18, 36 - (nameLen - 6) * 3);
             }
             ctx.font = `800 ${nameSize}px ${fontName}`;
-            // ------------------------------------------
-
             ctx.fillText(nameInput.value, leftCenterX, nameY);
 
             // 性別
@@ -432,7 +427,8 @@
                 
                 ctx.beginPath(); 
                 ctx.fillStyle = '#FFFFFF';
-                const border = 4;
+                // ★余白(クワイエットゾーン)を広めに確保
+                const border = 10; 
                 if (ctx.roundRect) {
                     ctx.roundRect(qrX - border, qrY - border, qrSize + border*2, qrSize + border*2, 8);
                 } else {
