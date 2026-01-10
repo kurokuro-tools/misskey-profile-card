@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-RVCND48VN8"></script>
     <script>
     window.dataLayer = window.dataLayer || [];
@@ -76,8 +75,16 @@
             font-size: 1.2rem; 
             text-align: center; 
             color: var(--text-color); 
-            opacity: 0.7; 
+            opacity: 0.9; 
             font-weight: 700; 
+        }
+
+        /* 非公式バッジのスタイルを追加 */
+        .unofficial-badge {
+            font-size: 0.8rem;
+            opacity: 0.7;
+            margin-right: 8px;
+            font-weight: normal;
         }
 
         .bug-report {
@@ -189,7 +196,7 @@
 <body>
 
     <div class="header-row">
-        <h1>Misskey プロフィールカード作成ツール</h1>
+        <h1><span class="unofficial-badge">非公式</span>Misskey プロフィールカード作成ツール</h1>
         <a href="https://misskey.io/@kuro_kuro_kuroi" target="_blank" class="bug-report">不具合報告はこちら</a>
     </div>
 
@@ -366,7 +373,18 @@
             ctx.textAlign = 'center';
             ctx.textBaseline = 'alphabetic';
             ctx.fillStyle = textColor;
-            ctx.font = `800 36px ${fontName}`;
+            
+            // --- 文字数によるフォントサイズ調整ロジック ---
+            let nameSize = 36;
+            const nameLen = nameInput.value.length;
+            if (nameLen > 6) {
+                // 6文字を超えた場合、文字数に応じてサイズを小さくする
+                // 例: 1文字ごとに3px小さくする（最小18pxまで）
+                nameSize = Math.max(18, 36 - (nameLen - 6) * 3);
+            }
+            ctx.font = `800 ${nameSize}px ${fontName}`;
+            // ------------------------------------------
+
             ctx.fillText(nameInput.value, leftCenterX, nameY);
 
             // 性別
@@ -400,7 +418,7 @@
             ctx.textBaseline = 'middle';
             ctx.fillText(idText, leftCenterX, idButtonCY);
 
-            // --- サーバー名描画 ---
+            // サーバー名
             ctx.fillStyle = accentColor;
             ctx.font = `700 16px ${fontName}`;
             ctx.textAlign = 'center';
